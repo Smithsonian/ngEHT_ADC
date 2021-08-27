@@ -1,2 +1,2 @@
 # ngEHT_ADC
-This is a repo with new python files and new data from the 4 channel ADC testing and characterization
+This contains new code on top of Rick's code and new data from the 16Gsps 4 channel ADC testing and data collection
