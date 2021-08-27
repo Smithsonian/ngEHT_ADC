@@ -1,0 +1,10 @@
+// Frequency response of the 4 channels with full scale loading at 200 MHz. Recording Vrms values
+              ChA            ChB           ChC         ChD
+    998      -25.8       
+    1994     -25.6    
+    2998     -25.8   
+    3998     -26.7   
+    5006     -26.5   
+    6002     -25.5   
+    6998     -26.0   
+    8002     -24.6   

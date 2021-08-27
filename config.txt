@@ -1,0 +1,80 @@
+*Values for SN3
+*DAC1 = 825      *vcrlref CH0 (purely offset)
+*DAC3 = 775      *vcrlref CH1
+*DAC5 = 700	 *vcrlref CH2
+*DAC7 = 513	 *vcrlref CH3
+*DAC2 = 420      *vcrllsb CH0 (mix of gain and offset)
+*DAC4 = 410      *vcrllsb CH1
+*DAC6 = 410      *vcrllsb CH2
+*DAC8 = 410      *vcrllsb CH3
+
+*Values for SN4
+*DAC1 = 910
+*DAC3 = 500
+*DAC5 = 725
+*DAC7 = 1023
+*DAC2 = 410
+*DAC4 = 410
+*DAC6 = 450
+*DAC8 = 410
+
+*Values for SN10
+*DAC1 = 645
+*DAC3 = 415
+*DAC5 = 487
+*DAC7 = 385
+*DAC2 = 450
+*DAC4 = 450
+*DAC6 = 450
+*DAC8 = 450
+
+
+*Values for SN11
+*DAC1 = 550
+*DAC3 = 725
+*DAC5 = 800
+*DAC7 = 750
+*DAC2 = 450
+*DAC4 = 450
+*DAC6 = 450
+*DAC8 = 450
+
+*Values for SN12
+*DAC1 = 550
+*DAC3 = 600
+*DAC5 = 565
+*DAC7 = 513
+*DAC2 = 450
+*DAC4 = 450
+*DAC6 = 450
+*DAC8 = 450
+
+*Values for SN13
+*DAC1 = 550
+*DAC3 = 542
+*DAC5 = 555
+*DAC7 = 690
+*DAC2 = 450
+*DAC4 = 450
+*DAC6 = 450
+*DAC8 = 450
+
+*Values for SN14
+*DAC1 = 589
+*DAC3 = 669
+*DAC5 = 390
+*DAC7 = 590
+*DAC2 = 450
+*DAC4 = 450
+*DAC6 = 450
+*DAC8 = 450
+
+*Updated Values for SN14
+DAC1 = 568
+DAC3 = 580
+DAC5 = 562
+DAC7 = 588
+DAC2 = 454
+DAC4 = 467
+DAC6 = 415
+DAC8 = 450
