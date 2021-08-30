@@ -1121,6 +1121,7 @@ while True:
         print("Peak at " + str(results[5]) + " MHz Power = " + str(results[6]) + " dB")
         print(" ENOB = " + str(results[4]) + " SFDR = " + str(results[2]))
         os.system('psd.pdf')
+
     if (inp == "THD"):
         inp1 = input("channel (0)")
         if inp1 == "": adc_chan = 0
@@ -1135,7 +1136,7 @@ while True:
         #else: carrier_freq = int(inp1)
         samples_2_get = 8192
         timenow=strftime("%Y-%m-%d_%H-%M-%S", gmtime())
-        filename='THD_Ch'+str(adc_chan)+'_'+timenow+'.txt'
+        filename='newdata/THD_Ch'+str(adc_chan)+'_'+timenow+'.txt'
         #CLKSEL = 0, PRBS ON, DAC ON, DATA ON all channels
         for i in range(4): ADC_params[i] = [0,1,1,1]
         setADC()
@@ -1143,22 +1144,29 @@ while True:
         ser_slow('1Z')                
         #pattern_match OFF
         ser_slow('0Y')      
-        thd_log = np.zeros(50)
-        thd_linear = np.zeros(50)
-        frequency = np.zeros(85)
-        THD = np.zeros(85)
+        thd_log = np.zeros(10)
+        thd_linear = np.zeros(10)
+        frequency = np.zeros(40)
+        THD = np.zeros(40)
         instrument=setgen.open_sg()
-        for num_freqs in range(1,81):
-            frequency[num_freqs]=100*num_freqs
+
+        #Number of frequencies to compute THD 
+        for num_freqs in range(40):
+            frequency[num_freqs]=200*(num_freqs+1)
+            #Compute power from coarse table
             calc_power=setgen.set_freq(frequency[num_freqs],instrument)
             calc_power=float(calc_power)
-            time.sleep(2)
+            time.sleep(1)
             carrier_freq=frequency[num_freqs]
+
+            #Number of THD measurements to average over
             for nloops in range(10):
                val_list = []
                rms_fs=np.zeros(10)
-               rms_fs_mean=4
+               rms_fs_mean=4.0  #Some random starting value not within the limits shown below
+
                while (rms_fs_mean > 5.35 or rms_fs_mean < 5.25):
+                 #Number of measurements to obtain mean value of ~ 5.3 (FS loading)
                  for num_times in range(10):
                    get_samples(adc_chan, samples_2_get, val_list)
                    rms_fs[num_times]=rms(val_list)
@@ -1172,25 +1180,29 @@ while True:
                print('RMS_FS_MEAN IS ',rms_fs_mean)
                thd_log[nloops] = adc.get_thd(carrier_freq, val_list,fsample,samples_2_get, True, "./psd.pdf")
                thd_linear[nloops] = 10**(-thd_log[nloops]/10.0)
-            thd_avg=thd_linear.sum()/10.0
+            thd_avg=thd_linear.sum()/10
             THD[num_freqs] = 10*np.log10(thd_avg)
-        print("THD is  \n", THD[num_freqs])
+            print("THD is  \n", THD[num_freqs])
+
         data = np.column_stack((frequency, THD))
-        np.savetxt(filename, data, fmt=('%7.4f', '%6.1f'))
+        np.savetxt(filename, data, fmt=('%7.4f', '%6.2f'))
         setgen.close_sg(instrument)
-    if (inp == "S_E_S"):
+
+    if (inp == "S_E_S_T"):
         inp1 = input("channel (0)")
         if inp1 == "": adc_chan = 0
         else: adc_chan = int(inp1)
         inp1 = input("sample freq (16384) ")
         if inp1 == "": fsample = 16384
         else: fsample = int(inp1)
-        inp1 = input("carrier freq (in MHz) ")
-        if inp1 == "": 
-            print("You did not enter a valid carrier frequency")
-            sys.exit()
-        else: carrier_freq = int(inp1)
+        #inp1 = input("carrier freq (in MHz) ")
+        #if inp1 == "": 
+        #    print("You did not enter a valid carrier frequency")
+        #    sys.exit()
+        #else: carrier_freq = int(inp1)
         samples_2_get = 8192
+        timenow=strftime("%Y-%m-%d_%H-%M-%S", gmtime())
+        filename='newdata/SINAD_ENOB_SFDR_Ch'+str(adc_chan)+'_'+timenow+'.txt'
         #CLKSEL = 0, PRBS ON, DAC ON, DATA ON all channels
         for i in range(4): ADC_params[i] = [0,1,1,1]
         setADC()
@@ -1198,12 +1210,71 @@ while True:
         ser_slow('1Z')                
         #pattern_match OFF
         ser_slow('0Y')      
-        val_list = []
-        get_samples(adc_chan, samples_2_get, val_list)
-        sinad, enob, sfdr = adc.get_sinad_enob_sfdr(carrier_freq, val_list,fsample,samples_2_get, True, "./psd.pdf")
-        print("SINAD is \n", sinad)
-        print("ENOB is \n", enob)
-        print("SFDR is \n", sfdr)
+        frequency = np.zeros(40)
+        SINAD = np.zeros(40)
+        ENOB = np.zeros(40)
+        SFDR = np.zeros(40)
+        THD = np.zeros(40)
+        thd_log = np.zeros(10)
+        thd_linear = np.zeros(10)
+        sinad_log = np.zeros(10)
+        sinad_linear = np.zeros(10)
+        sfdr_log = np.zeros(10)
+        sfdr_linear = np.zeros(10)
+        enob = np.zeros(10)
+        instrument=setgen.open_sg()
+
+        #Number of frequencies to compute SINAD, ENOB, SFDR
+        for num_freqs in range(40):
+            frequency[num_freqs]=200*(num_freqs+1)
+            #Compute power from coarse table
+            calc_power=setgen.set_freq(frequency[num_freqs],instrument)
+            calc_power=float(calc_power)
+            time.sleep(1)
+            carrier_freq=frequency[num_freqs]
+
+            #Number of measurements to average over
+            for nloops in range(10):
+               val_list = []
+               rms_fs=np.zeros(10)
+               rms_fs_mean=4.0  #Some random starting value not within the limits shown below
+
+               while (rms_fs_mean > 5.35 or rms_fs_mean < 5.25):
+                 #Number of measurements to obtain mean value of ~ 5.3 (FS loading)
+                 for num_times in range(10):
+                   get_samples(adc_chan, samples_2_get, val_list)
+                   rms_fs[num_times]=rms(val_list)
+                 rms_fs_mean=np.mean(rms_fs)
+                 if (rms_fs_mean > 5.35):
+                     calc_power=calc_power-0.1
+                     setgen.set_power(calc_power,instrument)
+                 else:
+                     calc_power=calc_power+0.1
+                     setgen.set_power(calc_power,instrument)
+               print('RMS_FS_MEAN IS ',rms_fs_mean)
+               sinad_log[nloops], enob[nloops], sfdr_log[nloops] = adc.get_sinad_enob_sfdr(carrier_freq, val_list,fsample,samples_2_get, True, "./psd.pdf")
+               sinad_linear[nloops] = 10**(-sinad_log[nloops]/10.0)
+               sfdr_linear[nloops] = 10**(-sfdr_log[nloops]/10.0)
+               thd_log[nloops] = adc.get_thd(carrier_freq, val_list,fsample,samples_2_get, True, "./psd.pdf")
+               thd_linear[nloops] = 10**(-thd_log[nloops]/10.0)
+            sinad_avg=sinad_linear.sum()/10
+            sfdr_avg=sfdr_linear.sum()/10
+            enob_direct=enob.sum()/10
+            thd_avg=thd_linear.sum()/10
+            THD[num_freqs] = 10*np.log10(thd_avg)
+            SINAD[num_freqs] = 10*np.log10(sinad_avg)
+            SFDR[num_freqs] = 10*np.log10(sfdr_avg)
+            ENOB[num_freqs] = (-SINAD[num_freqs] - 1.76)/6.02
+            print("SINAD is  \n", SINAD[num_freqs])
+            print("SFDR is  \n", SFDR[num_freqs])
+            print("ENOB is  \n", ENOB[num_freqs])
+            print("THD is  \n", THD[num_freqs])
+            print("enob is  \n", enob_direct)
+
+        data = np.column_stack((frequency, SINAD, SFDR, THD, ENOB))
+        np.savetxt(filename, data, fmt=('%7.4f', '%6.2f', '%6.2f', '%6.2f', '%6.3f'))
+        setgen.close_sg(instrument)
+
     if (inp == "OS"):
         if RF_gen_present:
             inp1 = input("Frequency to use, MHz? (550)")

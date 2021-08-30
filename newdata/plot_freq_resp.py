@@ -1,9 +1,14 @@
 import matplotlib.pyplot as plt
 import numpy
-from scipy.optimize import curve_fit
+from scipy import interpolate
 
-def f(x, m, c):
-    return m*x + c
+def f(x):
+    #Compute power from coarse table with cubic spline interpolation
+    meas_freq, meas_power = numpy.genfromtxt('cable_loss.txt',unpack=True,usecols=range(2))
+    coeff = interpolate.splrep(meas_freq, meas_power)
+    print(coeff)
+    power = interpolate.splev(x, coeff)
+    return power
 
 freq, A, B, C, D = numpy.genfromtxt('freq_response_SN14.txt',skip_header=2,unpack=True,usecols=range(5))
 
@@ -17,16 +22,14 @@ C_pow = 10.0*numpy.log10(C_V*C_V*1000.0/50.0)
 D_V = (D/5.3)*0.11
 D_pow = 10.0*numpy.log10(D_V*D_V*1000.0/50.0)
 
-meas_freq, meas_power = numpy.genfromtxt('cable_loss.txt',unpack=True,usecols=range(2))
-popt, pcov = curve_fit(f, meas_freq, meas_power)
-print("{:.2e}".format(popt[0])) 
-print("{:.2e}".format(popt[1])) 
-
+comp=numpy.zeros(len(freq))
 for i in range(len(freq)):
-    A_pow[i] = A_pow[i] + (popt[0]*freq[i]) - popt[1]
-    B_pow[i] = B_pow[i] + (popt[0]*freq[i]) - popt[1]
-    C_pow[i] = C_pow[i] + (popt[0]*freq[i]) - popt[1]
-    D_pow[i] = D_pow[i] + (popt[0]*freq[i]) - popt[1]
+    comp[i]=f(freq[i])
+for i in range(len(freq)):
+    A_pow[i] = A_pow[i] + comp[i] +12.1
+    B_pow[i] = B_pow[i] + comp[i] +12.1
+    C_pow[i] = C_pow[i] + comp[i] +12.1
+    D_pow[i] = D_pow[i] + comp[i] +12.1
 
 plt.plot(freq, A_pow, 'ro',label = "Channel A")
 plt.plot(freq, B_pow, 'gx',label = "Channel B")
