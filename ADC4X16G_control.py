@@ -502,7 +502,7 @@ if no_hw == 0:
         except socket.error as msg :
             print ('Failed to create socket. Error Code : ' + str(msg[0]) + ' Message ' + msg[1])
             sys.exit()    
-        sock.settimeout(0.5)
+        sock.settimeout(2.5)
     else:
         try:
             ser = serial.Serial(serial_port, 115200)

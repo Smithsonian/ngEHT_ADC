@@ -27,10 +27,10 @@ if not opts.power:
 frequency=opts.freq
 power=opts.power
 
-if ((frequency < 100) or (frequency > 8192)):
+if ((frequency < 100) or (frequency > 16000)):
     print('CW Frequency out of range')
     sys.exit()
-if (power > 0.0):
+if (power > 4.0):
     print('Power too high')
     sys.exit()
 

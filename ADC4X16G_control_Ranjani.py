@@ -540,7 +540,9 @@ while True:
     "PSD" to take data and display the power spectral density,
     "NPR" to take an average of a bunch of spectra, and store in avg_psd.csv
     "THD" to get the total harmonic distortion
-    "S_E_S" to get SINAD and ENOB and SFDR
+    "S_E_S_T" to get SINAD and ENOB and SFDR and THD
+    "FREQ_RESP" to get frequency response in 200 MHz increments with 200 MHz at FS
+    "MULT_T" to get multiple ADC snapshots
     or "q" to quit\n''')
     if inp == 'q':
         if (use_udp == 0):ser.close()
@@ -899,6 +901,63 @@ while True:
                 #pattern_match OFF
                 ser_slow('0Y')      
         
+    elif (inp == 'MULT_T'):
+        inpfreq=input('Which frequency in MHz or hit enter if all inputs are terminated?   ')
+        if (inpfreq == ""):
+            inpfreq='NONE'
+        for i in range(20):
+            val_list0=[]
+            val_list1=[]
+            val_list2=[]
+            val_list3=[]      
+            get_samples(0, 1024, val_list0)   
+            #time.sleep(.5)
+            get_samples(1, 1024, val_list1)
+            #time.sleep(.5)
+            get_samples(2, 1024, val_list2)
+            #time.sleep(.5)
+            get_samples(3, 1024, val_list3)
+            
+            #A 600-by-600 pixel plot
+            textstr = 'Mean=%.2f\nRMS=%.2f\n'%(sum(val_list0)/len(val_list0), rms(val_list0))
+            fig=plt.figure(figsize = (6,6))
+            t = np.arange(len(val_list0))
+            ax = plt.subplot(221)
+            ax.set(ylim=(0, 15))
+            ax.set_yticks([0, 2.5, 5, 7.5, 10, 12.5, 15])
+            ax.set_yticklabels([0, 2.5, 5, 7.5, 10, 12.5, 15])
+            plt.plot(t, val_list0)
+            plt.text(0.02, 0.9, textstr, fontsize=10, transform=plt.gcf().transFigure )
+            t = np.arange(len(val_list1))
+            textstr = 'Mean=%.2f\nRMS=%.2f\n'%(sum(val_list1)/len(val_list1), rms(val_list1))
+            ax = plt.subplot(222)
+            ax.set(ylim=(0, 15))
+            ax.set_yticks([0, 2.5, 5, 7.5, 10, 12.5, 15])
+            ax.set_yticklabels([0, 2.5, 5, 7.5, 10, 12.5, 15])
+            plt.plot(t, val_list1)
+            plt.text(0.32, 0.9, textstr, fontsize=10, transform=plt.gcf().transFigure )
+            textstr = 'Mean=%.2f\nRMS=%.2f\n'%(sum(val_list2)/len(val_list2), rms(val_list2))
+            t = np.arange(len(val_list2))
+            ax = plt.subplot(223)
+            ax.set(ylim=(0, 15))
+            ax.set_yticks([0, 2.5, 5, 7.5, 10, 12.5, 15])
+            ax.set_yticklabels([0, 2.5, 5, 7.5, 10, 12.5, 15])
+            plt.plot(t, val_list2)
+            plt.text(0.62, 0.9, textstr, fontsize=10, transform=plt.gcf().transFigure )
+            t = np.arange(len(val_list3))
+            textstr = 'Mean=%.2f\nRMS=%.2f\n'%(sum(val_list3)/len(val_list3), rms(val_list3))
+            ax = plt.subplot(224)
+            ax.set(ylim=(0, 15))
+            ax.set_yticks([0, 2.5, 5, 7.5, 10, 12.5, 15])
+            ax.set_yticklabels([0, 2.5, 5, 7.5, 10, 12.5, 15])
+            plt.plot(t, val_list3)
+            plt.text(0.82, 0.9, textstr, fontsize=10, transform=plt.gcf().transFigure )
+            #plt.show()
+            filename='figures/Snapshots_'+ str(inpfreq) + '_' + str(i+19) + '_' +'.png'
+            plt.savefig(filename)
+            plt.cla()
+        plt.close(fig)
+        
     if (inp == "E"):
         #CLKSEL = 0, PRBS ON, DAC ON, DATA OFF all channels
         for i in range(4): ADC_params[i] = [0,1,1,0]
@@ -1188,6 +1247,51 @@ while True:
         np.savetxt(filename, data, fmt=('%7.4f', '%6.2f'))
         setgen.close_sg(instrument)
 
+    if (inp == "FREQ_RESP"):
+        inp1 = input("channel (0)")
+        if inp1 == "": adc_chan = 0
+        else: adc_chan = int(inp1)
+        inp1 = input("sample freq (16384) ")
+        if inp1 == "": fsample = 16384
+        else: fsample = int(inp1)
+        #inp1 = input("carrier freq (in MHz) ")
+        #if inp1 == "": 
+        #    print("You did not enter a valid carrier frequency")
+        #    sys.exit()
+        #else: carrier_freq = int(inp1)
+        samples_2_get = 8192
+        timenow=strftime("%Y-%m-%d_%H-%M-%S", gmtime())
+        filename='newdata/freq_resp_Ch'+str(adc_chan)+'_'+timenow+'.txt'
+        #CLKSEL = 0, PRBS ON, DAC ON, DATA ON all channels
+        for i in range(4): ADC_params[i] = [0,1,1,1]
+        setADC()
+        #XOR ON
+        ser_slow('1Z')                
+        #pattern_match OFF
+        ser_slow('0Y')      
+        frequency = np.zeros(80)
+        rms_mean=np.zeros(80)
+        rms_val=np.zeros(10)
+        instrument=setgen.open_sg()
+
+        #Number of frequencies to compute freq response 
+        for num_freqs in range(80):
+            frequency[num_freqs]=200*(num_freqs+1)
+            setgen.set_freq_only(frequency[num_freqs],instrument)
+            time.sleep(1)
+
+            #Number of measurements to obtain mean value of rms
+            for num_times in range(10):
+                   val_list=[]
+                   get_samples(adc_chan, samples_2_get, val_list)
+                   rms_val[num_times]=rms(val_list)
+            rms_mean[num_freqs]=np.mean(rms_val)
+            print('RMS_MEAN IS ',rms_mean[num_freqs])
+
+        data = np.column_stack((frequency, rms_mean))
+        np.savetxt(filename, data, fmt=('%7.4f', '%6.2f'))
+        setgen.close_sg(instrument)
+
     if (inp == "S_E_S_T"):
         inp1 = input("channel (0)")
         if inp1 == "": adc_chan = 0
@@ -1202,7 +1306,7 @@ while True:
         #else: carrier_freq = int(inp1)
         samples_2_get = 8192
         timenow=strftime("%Y-%m-%d_%H-%M-%S", gmtime())
-        filename='newdata/SINAD_ENOB_SFDR_Ch'+str(adc_chan)+'_'+timenow+'.txt'
+        filename='newdata/SINAD_ENOB_SFDR_THD_Ch'+str(adc_chan)+'_'+timenow+'.txt'
         #CLKSEL = 0, PRBS ON, DAC ON, DATA ON all channels
         for i in range(4): ADC_params[i] = [0,1,1,1]
         setADC()
@@ -1233,8 +1337,9 @@ while True:
             time.sleep(1)
             carrier_freq=frequency[num_freqs]
 
+            num_aver=2
             #Number of measurements to average over
-            for nloops in range(10):
+            for nloops in range(num_aver):
                val_list = []
                rms_fs=np.zeros(10)
                rms_fs_mean=4.0  #Some random starting value not within the limits shown below
@@ -1257,10 +1362,10 @@ while True:
                sfdr_linear[nloops] = 10**(-sfdr_log[nloops]/10.0)
                thd_log[nloops] = adc.get_thd(carrier_freq, val_list,fsample,samples_2_get, True, "./psd.pdf")
                thd_linear[nloops] = 10**(-thd_log[nloops]/10.0)
-            sinad_avg=sinad_linear.sum()/10
-            sfdr_avg=sfdr_linear.sum()/10
-            enob_direct=enob.sum()/10
-            thd_avg=thd_linear.sum()/10
+            sinad_avg=sinad_linear.sum()/num_aver
+            sfdr_avg=sfdr_linear.sum()/num_aver
+            enob_direct=enob.sum()/num_aver
+            thd_avg=thd_linear.sum()/num_aver
             THD[num_freqs] = 10*np.log10(thd_avg)
             SINAD[num_freqs] = 10*np.log10(sinad_avg)
             SFDR[num_freqs] = 10*np.log10(sfdr_avg)
@@ -1294,12 +1399,14 @@ while True:
         new_OS_DAC_value = initial_DACvals[OS_DAC_add]
         samples_2_get = 8192
         offset = 0
-        while abs(offset - target_offset) > offset_adjust_tolerance:
+        while abs(np.mean(offset) - target_offset) > offset_adjust_tolerance:
             val_list = []
-            get_samples(adc_chan, samples_2_get, val_list)
-            offset = sum(val_list)/len(val_list)
-            print(offset)
-            new_OS_DAC_value = new_OS_DAC_value + int((target_offset - offset)/dac_to_offset_gain)
+            offset = np.zeros(50)
+            for i in range(50):
+               get_samples(adc_chan, samples_2_get, val_list)
+               offset[i] = sum(val_list)/len(val_list)
+            print(np.mean(offset))
+            new_OS_DAC_value = new_OS_DAC_value + int((target_offset - np.mean(offset))/dac_to_offset_gain)
             write_DAC_value(2*adc_chan+1, new_OS_DAC_value)
             time.sleep(0.2)
         print("Adjusted Offset DAC value", new_OS_DAC_value)
