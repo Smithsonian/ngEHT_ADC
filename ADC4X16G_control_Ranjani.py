@@ -1360,7 +1360,7 @@ while True:
             for nloops in range(num_aver):
                rms_fs_mean=4.0  #Some random starting value not within the limits shown below
 
-               while (rms_fs_mean > 5.05 or rms_fs_mean < 4.95):
+               while (rms_fs_mean > 5.35 or rms_fs_mean < 5.25):
                  rms_fs=np.zeros(10)
                  #Number of measurements to obtain mean value of ~ 5.3 (FS loading)
                  for num_times in range(10):
@@ -1375,7 +1375,7 @@ while True:
 
                  rms_fs_mean=np.mean(rms_fs)
                  print(rms_fs_mean)
-                 if (rms_fs_mean > 5.05):
+                 if (rms_fs_mean > 5.35):
                      calc_power=calc_power-0.1
                      setgen.set_power(calc_power,instrument)
                  else:
