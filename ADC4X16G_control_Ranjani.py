@@ -34,6 +34,7 @@ use_udp = 1
 UDP_DEST_IP = "192.168.1.10"
 #VCU128 expects commands on this port
 UDP_CMD_PORT= 60000
+UDP_CMD_PORT1= 60001
 
 #Make a filename of form ADC052020_B4_CA_S16_T35_DC513_DL410_I7_5.csv
 # With date, Board SN, Channel, Sampling freq, Temperature, DAC CRL (DC), DAC LSB (DL), Input freq (in GHz)
@@ -170,7 +171,6 @@ def get_samples(chan, nsamp, val_list):
         for packet in range(4):
             reply = sock.recvfrom(1024)
             bytesback = reply[0]
-            #print(len(bytesback))
             for n in range(1024):
                 full_list.append((bytesback[n]) & 0xf)
                 full_list.append(bytesback[n] >>4)
@@ -486,6 +486,18 @@ def set_DACs():
     print (initial_DACvals)
     fhand.close()
     
+
+def create_socket(PORT):
+        global sock
+        try :
+            sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) # UDP
+            sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            sock.bind(("", PORT))
+            print ("Socket Created on port  " + str(PORT))
+        except socket.error as msg :
+            print ('Failed to create socket. Error Code : ' + str(msg[0]) + ' Message ' + msg[1])
+            sys.exit()    
+        sock.settimeout(0.5)
 ##########################################################    
 ##########################################################    
 ##########################################################    
@@ -497,14 +509,15 @@ if no_hw == 0:
     #This requires administrator privileges, so leave it out for normal operation
     #os.system('arp -d')
     if use_udp == 1:
-        try :
-            sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) # UDP
-            sock.bind(("", UDP_CMD_PORT))
-            print ("Socket Created")
-        except socket.error as msg :
-            print ('Failed to create socket. Error Code : ' + str(msg[0]) + ' Message ' + msg[1])
-            sys.exit()    
-        sock.settimeout(0.5)
+        create_socket(UDP_CMD_PORT)
+        #try :
+        #    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) # UDP
+        #    sock.bind(("", UDP_CMD_PORT))
+        #    print ("Socket Created")
+        #except socket.error as msg :
+        #    print ('Failed to create socket. Error Code : ' + str(msg[0]) + ' Message ' + msg[1])
+        #    sys.exit()    
+        #sock.settimeout(0.5)
     else:
         try:
             ser = serial.Serial(serial_port, 115200)
@@ -1261,7 +1274,7 @@ while True:
         #else: carrier_freq = int(inp1)
         samples_2_get = 8192
         timenow=strftime("%Y-%m-%d_%H-%M-%S", gmtime())
-        filename='newdata/freq_resp_Ch'+str(adc_chan)+'_'+timenow+'.txt'
+        filename='newdata/freq_resp_Ch'+str(adc_chan)+'_'+timenow+ '_' + str(fsample) + '.txt'
         #CLKSEL = 0, PRBS ON, DAC ON, DATA ON all channels
         for i in range(4): ADC_params[i] = [0,1,1,1]
         setADC()
@@ -1283,8 +1296,13 @@ while True:
             #Number of measurements to obtain mean value of rms
             for num_times in range(10):
                    val_list=[]
-                   get_samples(adc_chan, samples_2_get, val_list)
-                   rms_val[num_times]=rms(val_list)
+                   try:
+                       get_samples(adc_chan, samples_2_get, val_list)
+                       rms_val[num_times]=rms(val_list)
+                   except socket.timeout:
+                       print("socket timeout")
+                       get_samples(adc_chan, samples_2_get, val_list)
+                       rms_val[num_times]=rms(val_list)
             rms_mean[num_freqs]=np.mean(rms_val)
             print('RMS_MEAN IS ',rms_mean[num_freqs])
 
@@ -1337,19 +1355,26 @@ while True:
             time.sleep(1)
             carrier_freq=frequency[num_freqs]
 
-            num_aver=2
+            num_aver=10
             #Number of measurements to average over
             for nloops in range(num_aver):
-               val_list = []
-               rms_fs=np.zeros(10)
                rms_fs_mean=4.0  #Some random starting value not within the limits shown below
 
                while (rms_fs_mean > 5.35 or rms_fs_mean < 5.25):
+                 rms_fs=np.zeros(10)
                  #Number of measurements to obtain mean value of ~ 5.3 (FS loading)
                  for num_times in range(10):
-                   get_samples(adc_chan, samples_2_get, val_list)
-                   rms_fs[num_times]=rms(val_list)
+                   val_list = []
+                   try:
+                      get_samples(adc_chan, samples_2_get, val_list)
+                      rms_fs[num_times]=rms(val_list)
+                   except socket.timeout:
+                      print("socket timeout")
+                      get_samples(adc_chan, samples_2_get, val_list)
+                      rms_fs[num_times]=rms(val_list)
+
                  rms_fs_mean=np.mean(rms_fs)
+                 print(rms_fs_mean)
                  if (rms_fs_mean > 5.35):
                      calc_power=calc_power-0.1
                      setgen.set_power(calc_power,instrument)
@@ -1357,6 +1382,7 @@ while True:
                      calc_power=calc_power+0.1
                      setgen.set_power(calc_power,instrument)
                print('RMS_FS_MEAN IS ',rms_fs_mean)
+
                sinad_log[nloops], enob[nloops], sfdr_log[nloops] = adc.get_sinad_enob_sfdr(carrier_freq, val_list,fsample,samples_2_get, True, "./psd.pdf")
                sinad_linear[nloops] = 10**(-sinad_log[nloops]/10.0)
                sfdr_linear[nloops] = 10**(-sfdr_log[nloops]/10.0)
@@ -1403,8 +1429,13 @@ while True:
             val_list = []
             offset = np.zeros(50)
             for i in range(50):
-               get_samples(adc_chan, samples_2_get, val_list)
-               offset[i] = sum(val_list)/len(val_list)
+               try:
+                   get_samples(adc_chan, samples_2_get, val_list)
+                   offset[i] = sum(val_list)/len(val_list)
+               except socket.timeout:
+                   print("socket timeout")
+                   get_samples(adc_chan, samples_2_get, val_list)
+                   offset[i] = sum(val_list)/len(val_list)
             print(np.mean(offset))
             new_OS_DAC_value = new_OS_DAC_value + int((target_offset - np.mean(offset))/dac_to_offset_gain)
             write_DAC_value(2*adc_chan+1, new_OS_DAC_value)
