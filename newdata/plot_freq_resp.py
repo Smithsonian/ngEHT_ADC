@@ -41,7 +41,7 @@ for i in range(len(freq)):
 plt.plot(freq, A_pow_comp, 'ro',label = "Channel A")
 plt.plot(freq, B_pow_comp, 'gx',label = "Channel B")
 plt.plot(freq, C_pow_comp, 'b+',label = "Channel C")
-plt.plot(freq, D_pow_comp, 'b*',label = "Channel D")
+plt.plot(freq, D_pow_comp, 'y*',label = "Channel D")
 plt.grid()
 plt.xlim([0, 8000])
 plt.ylim([-4, 0])
