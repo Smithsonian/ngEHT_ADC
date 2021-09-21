@@ -322,7 +322,11 @@ def align_all():
                 #ser_slow('V')
                 print("adjusting ADC channel ", adc_chan)
                 val_list = []
-                get_samples(adc_chan, samples_2_get, val_list)
+                try:
+                     get_samples(adc_chan, samples_2_get, val_list)
+                except socket.timeout:
+                     get_samples(adc_chan, samples_2_get, val_list)
+
                 bit3=[]
                 bit2=[]
                 bit1=[]

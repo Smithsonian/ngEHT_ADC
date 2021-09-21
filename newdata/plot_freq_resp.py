@@ -11,19 +11,19 @@ def f(x):
     return power
 
 filename=input("Name of text file    :")
-freq, A, B, C, D = numpy.genfromtxt(filename,unpack=True,usecols=(0,1,3,5,7))
-#freq, D = numpy.genfromtxt(filename,unpack=True,usecols=(0,1))
+#freq, A, B, C, D = numpy.genfromtxt(filename,unpack=True,usecols=(0,1,3,5,7))
+freq, A = numpy.genfromtxt(filename,unpack=True,usecols=(0,1))
 nameoffile=Path(filename).stem + '.png'
 
 #0.11 is Vrms for this ADC
 A_V = (A/5.3)*0.11
 A_pow = 10.0*numpy.log10(A_V*A_V*1000.0/50.0) + 6.0
-B_V = (B/5.3)*0.11
-B_pow = 10.0*numpy.log10(B_V*B_V*1000.0/50.0) + 6.0
-C_V = (C/5.3)*0.11
-C_pow = 10.0*numpy.log10(C_V*C_V*1000.0/50.0) + 6.0
-D_V = (D/5.3)*0.11
-D_pow = 10.0*numpy.log10(D_V*D_V*1000.0/50.0) + 6.0
+#B_V = (B/5.3)*0.11
+#B_pow = 10.0*numpy.log10(B_V*B_V*1000.0/50.0) + 6.0
+#C_V = (C/5.3)*0.11
+#C_pow = 10.0*numpy.log10(C_V*C_V*1000.0/50.0) + 6.0
+#D_V = (D/5.3)*0.11
+#D_pow = 10.0*numpy.log10(D_V*D_V*1000.0/50.0) + 6.0
 
 comp=numpy.zeros(len(freq))
 A_pow_comp=numpy.zeros(len(freq))
@@ -33,18 +33,18 @@ D_pow_comp=numpy.zeros(len(freq))
 for i in range(len(freq)):
     comp[i]=f(freq[i])
 for i in range(len(freq)):
-    A_pow_comp[i] = A_pow[i] + comp[i] 
-    B_pow_comp[i] = B_pow[i] + comp[i] 
-    C_pow_comp[i] = C_pow[i] + comp[i] 
-    D_pow_comp[i] = D_pow[i] + comp[i] 
+    A_pow_comp[i] = A_pow[i]  + comp[i]
+#    B_pow_comp[i] = B_pow[i] + comp[i] 
+#    C_pow_comp[i] = C_pow[i] + comp[i] 
+#    D_pow_comp[i] = D_pow[i] + comp[i] 
 
-plt.plot(freq, A_pow_comp, 'ro',label = "Channel A")
-plt.plot(freq, B_pow_comp, 'gx',label = "Channel B")
-plt.plot(freq, C_pow_comp, 'b+',label = "Channel C")
-plt.plot(freq, D_pow_comp, 'y*',label = "Channel D")
+plt.plot(freq, A_pow_comp, 'ro',label = "Channel B")
+#plt.plot(freq, B_pow_comp, 'gx',label = "Channel B")
+#plt.plot(freq, C_pow_comp, 'b+',label = "Channel C")
+#plt.plot(freq, D_pow_comp, 'y*',label = "Channel D")
 plt.grid()
 plt.xlim([0, 8000])
-plt.ylim([-4, 0])
+plt.ylim([-8, 0])
 plt.xlabel('Frequency (MHz)')
 plt.ylabel('Power (dBm)')
 plt.title('Frequency response for SN14 ADC board')

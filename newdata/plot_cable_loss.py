@@ -15,7 +15,7 @@ plt.plot(meas_freq, -meas_power, 'r*',label = "Measured Cable Loss")
 plt.grid()
 plt.xlabel('Frequency (MHz)')
 plt.ylabel('Power (dBm)')
-plt.xlim([0,8000])
+plt.xlim([0,16000])
 plt.title('Cable loss ')
 
 plt.legend()
