@@ -560,6 +560,7 @@ while True:
     "S_E_S_T" to get SINAD and ENOB and SFDR and THD
     "FREQ_RESP" to get frequency response in 200 MHz increments with 200 MHz at FS
     "MULT_T" to get multiple ADC snapshots
+    "DNL" to get single ADC snapshots and compute DNL
     or "q" to quit\n''')
     if inp == 'q':
         if (use_udp == 0):ser.close()
@@ -1409,6 +1410,43 @@ while True:
         data = np.column_stack((frequency, SINAD, SFDR, THD, ENOB))
         np.savetxt(filename, data, fmt=('%7.4f', '%6.2f', '%6.2f', '%6.2f', '%6.3f'))
         setgen.close_sg(instrument)
+
+    if (inp == 'DNL'):
+            inp1=input('Which ADC channel:    ')
+            if inp1 == "": inp1 = "0"
+            adc_chan = int(inp1)
+            val_list = []
+            inp1 = input("How many multiples of 256 samples (up to 32), default 32?")
+            if inp1=="": inp1 = "32"
+            samples_2_get = 256 * int(inp1)
+            if samples_2_get > 8192: samples_2_get = 8192
+            get_samples(adc_chan, samples_2_get, val_list)
+            N=4
+            num_samples=8192
+            p=np.zeros(2**N+1)
+            h=np.zeros(2**N+1)
+
+            for i in range(1,2**N+1):
+                arg1=(i-2**(N-1))/2**N
+                arg2=(i-1-2**(N-1))/2**N
+                p[i] = (1.0/np.pi) * (np.arcsin((1.97)*arg1) - np.arcsin((1.97)*arg2))
+                h[i] = p[i]*num_samples
+            n=np.linspace(1,2**N,16,endpoint=True)
+            p=np.delete(p,0)
+            h=np.delete(h,0)
+            print(n)
+            print(p)
+            print(h)
+            plt.hist(n,16,weights=h) 
+            plt.show()
+            counts, bins = np.histogram(val_list, bins = [-0.5,0.5,1.5,2.5,3.5,4.5,5.5,6.5,7.5,8.5,9.5,10.5,11.5,12.5,13.5,14.5,15.5,16.5])
+            print(counts)
+            plt.hist(val_list,bins)
+            plt.show()
+            counts_adj=[]
+            #counts_adj=np.append(counts_adj, (counts[0]+counts[1], counts[2], counts[3], counts[4], counts[5], counts[6], counts[7], counts[8], counts[9], counts[10], counts[11], counts[12], counts[13], counts[14]+counts[15]))
+            #print(counts_adj)
+            print(bins)
 
     if (inp == "OS"):
         if RF_gen_present:
