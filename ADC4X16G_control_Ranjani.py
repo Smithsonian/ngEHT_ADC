@@ -1415,38 +1415,99 @@ while True:
             inp1=input('Which ADC channel:    ')
             if inp1 == "": inp1 = "0"
             adc_chan = int(inp1)
-            val_list = []
             inp1 = input("How many multiples of 256 samples (up to 32), default 32?")
             if inp1=="": inp1 = "32"
             samples_2_get = 256 * int(inp1)
             if samples_2_get > 8192: samples_2_get = 8192
-            get_samples(adc_chan, samples_2_get, val_list)
             N=4
-            num_samples=8192
-            p=np.zeros(2**N+1)
-            h=np.zeros(2**N+1)
+            num_samples=samples_2_get
+            instrument=setgen.open_sg()
+            calc_power=setgen.set_freq(200,instrument)
+            calc_power=float(calc_power)
 
-            for i in range(1,2**N+1):
-                arg1=(i-2**(N-1))/2**N
-                arg2=(i-1-2**(N-1))/2**N
-                p[i] = (1.0/np.pi) * (np.arcsin((1.97)*arg1) - np.arcsin((1.97)*arg2))
-                h[i] = p[i]*num_samples
-            n=np.linspace(1,2**N,16,endpoint=True)
+            rms_fs_mean=4.0  #Some random starting value not within the limits shown below
+
+            while (rms_fs_mean > 5.42 or rms_fs_mean < 5.38):
+                 rms_fs=np.zeros(10)
+                 #Number of measurements to obtain mean value of ~ 5.3 (FS loading)
+                 for num_times in range(10):
+                   val_list = []
+                   try:
+                      get_samples(adc_chan, samples_2_get, val_list)
+                      rms_fs[num_times]=rms(val_list)
+                   except socket.timeout:
+                      print("socket timeout")
+                      get_samples(adc_chan, samples_2_get, val_list)
+                      rms_fs[num_times]=rms(val_list)
+
+                 rms_fs_mean=np.mean(rms_fs)
+                 print(rms_fs_mean)
+                 if (rms_fs_mean > 5.42):
+                     calc_power=calc_power-0.1
+                     setgen.set_power(calc_power,instrument)
+                 else:
+                     calc_power=calc_power+0.1
+                     setgen.set_power(calc_power,instrument)
+            print('RMS_FS_MEAN IS ',rms_fs_mean)
+            print("RATIO IS   ", 10.6/rms_fs_mean)
+
+            p=np.zeros(2**N-1)
+            h=np.zeros(2**N-1)
+            for i in range(1,(2**N)-1):
+                 arg1=(i-2**(N-1))/2**N
+                 arg2=(i-1-2**(N-1))/2**N
+                 p[i] = (1.0/np.pi) * (np.arcsin((10.6/rms_fs_mean)*arg1) - np.arcsin((10.6/rms_fs_mean)*arg2))
+                 h[i] = int(p[i]*num_samples)
+            n=np.linspace(1,(2**N)-2,14,endpoint=True)
             p=np.delete(p,0)
             h=np.delete(h,0)
             print(n)
             print(p)
             print(h)
-            plt.hist(n,16,weights=h) 
+            #plt.hist(n,14,weights=h) 
+            #plt.show()
+
+            maxdnl=np.zeros(10)
+            mindnl=np.zeros(10)
+            dnl_mean=np.zeros(2**N-2)
+            for k in range(10):
+                val_list = []
+                try:
+                   get_samples(adc_chan, samples_2_get, val_list)
+                except socket.timeout:
+                   get_samples(adc_chan, samples_2_get, val_list)
+                counts, bins = np.histogram(val_list, bins = [-0.5,0.5,1.5,2.5,3.5,4.5,5.5,6.5,7.5,8.5,9.5,10.5,11.5,12.5,13.5,14.5,15.5])
+                print(counts)
+                print(bins)
+                #Throw away the end point bins which are clipped
+                counts=np.delete(counts,15)
+                counts=np.delete(counts,0)
+                print(counts)
+                time.sleep(1)
+                #plt.hist(val_list,bins)
+                #plt.show()
+                dnl=np.zeros(2**N-2)
+                for i in range(0,(2**N)-2):
+                    dnl[i]=(counts[i]/h[i]) - 1
+                    dnl_mean[i]=dnl[i]+dnl_mean[i]
+                    print(dnl[i])
+            dnl_mean=dnl_mean/10
+            print(dnl_mean)
+            maxdnl=round(np.max(dnl_mean),2)
+            mindnl=round(np.min(dnl_mean),2)
+            plt.plot(n,dnl)
+            plt.xlim([0,16])
+            plt.ylim([-1,+1])
+            plt.axhline(y=maxdnl, color='r', linestyle='-')
+            plt.axhline(y=mindnl, color='r', linestyle='-')
+            plt.title("DNL: %0.2f LSB    %0.2f LSB" %(maxdnl,mindnl))
+            plt.grid()
             plt.show()
-            counts, bins = np.histogram(val_list, bins = [-0.5,0.5,1.5,2.5,3.5,4.5,5.5,6.5,7.5,8.5,9.5,10.5,11.5,12.5,13.5,14.5,15.5,16.5])
-            print(counts)
-            plt.hist(val_list,bins)
-            plt.show()
-            counts_adj=[]
-            #counts_adj=np.append(counts_adj, (counts[0]+counts[1], counts[2], counts[3], counts[4], counts[5], counts[6], counts[7], counts[8], counts[9], counts[10], counts[11], counts[12], counts[13], counts[14]+counts[15]))
-            #print(counts_adj)
-            print(bins)
+            inl=np.zeros(2**N-1)
+            for i in range(1,(2**N)-1):
+                for j in range(1,i):
+                    inl[j]=np.sum(dnl[:i])
+                print(inl[j])
 
     if (inp == "OS"):
         if RF_gen_present:
@@ -1577,7 +1638,10 @@ while True:
                 print("Coarse adjust offset DAC value for channel ", adc_chan)
                 while (1):
                     val_list = []
-                    get_samples(adc_chan, samples_2_get, val_list)
+                    try:
+                        get_samples(adc_chan, samples_2_get, val_list)
+                    except socket.timeout:
+                        get_samples(adc_chan, samples_2_get, val_list)
                     mean = sum(val_list)/len(val_list)
                     ampl = rms(val_list)
                     print("average value = ", mean, end = '')
@@ -1598,7 +1662,10 @@ while True:
                     print()
                     print("Adjust gain DAC value for channel ", adc_chan)
                     val_list = []
-                    get_samples(adc_chan, samples_2_get, val_list)
+                    try:
+                       get_samples(adc_chan, samples_2_get, val_list)
+                    except socket.timeout:
+                       get_samples(adc_chan, samples_2_get, val_list)
                     mean = sum(val_list)/len(val_list)
                     ampl = rms(val_list)
                     print("average value = ", mean, end = '')
@@ -1629,7 +1696,10 @@ while True:
             mean_done = 0
             while (1):
                 val_list = []
-                get_samples(adc_chan, samples_2_get, val_list)
+                try:
+                    get_samples(adc_chan, samples_2_get, val_list)
+                except socket.timeout:
+                    get_samples(adc_chan, samples_2_get, val_list)
                 mean = sum(val_list)/len(val_list)
                 ampl = rms(val_list)
                 print("average value = ", mean, end = '')
