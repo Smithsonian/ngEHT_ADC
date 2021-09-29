@@ -557,10 +557,10 @@ while True:
     "PSD" to take data and display the power spectral density,
     "NPR" to take an average of a bunch of spectra, and store in avg_psd.csv
     "THD" to get the total harmonic distortion
-    "S_E_S_T" to get SINAD and ENOB and SFDR and THD
+    "S_E_S_T" to compute SINAD and ENOB and SFDR and THD
     "FREQ_RESP" to get frequency response in 200 MHz increments with 200 MHz at FS
     "MULT_T" to get multiple ADC snapshots
-    "DNL" to get single ADC snapshots and compute DNL
+    "D_I" to  compute DNL and INL at 1147 MHz (non harmonic of sampling frequency)
     or "q" to quit\n''')
     if inp == 'q':
         if (use_udp == 0):ser.close()
@@ -1411,7 +1411,7 @@ while True:
         np.savetxt(filename, data, fmt=('%7.4f', '%6.2f', '%6.2f', '%6.2f', '%6.3f'))
         setgen.close_sg(instrument)
 
-    if (inp == 'DNL'):
+    if (inp == 'D_I'):
             inp1=input('Which ADC channel:    ')
             if inp1 == "": inp1 = "0"
             adc_chan = int(inp1)
@@ -1420,16 +1420,19 @@ while True:
             samples_2_get = 256 * int(inp1)
             if samples_2_get > 8192: samples_2_get = 8192
             N=4
+            timenow=strftime("%Y-%m-%d_%H-%M-%S", gmtime())
+            filenameD='newdata/DNL_Ch'+str(adc_chan)+'_'+timenow+'.png'
+            filenameI='newdata/INL_Ch'+str(adc_chan)+'_'+timenow+'.png'
             num_samples=samples_2_get
             instrument=setgen.open_sg()
-            calc_power=setgen.set_freq(200,instrument)
+            calc_power=setgen.set_freq(1147,instrument)
             calc_power=float(calc_power)
 
             rms_fs_mean=4.0  #Some random starting value not within the limits shown below
 
             while (rms_fs_mean > 5.42 or rms_fs_mean < 5.38):
                  rms_fs=np.zeros(10)
-                 #Number of measurements to obtain mean value of ~ 5.3 (FS loading)
+                 #Number of measurements to obtain mean value of ~ 5.4 (slightly higher than FS loading)
                  for num_times in range(10):
                    val_list = []
                    try:
@@ -1450,6 +1453,7 @@ while True:
                      setgen.set_power(calc_power,instrument)
             print('RMS_FS_MEAN IS ',rms_fs_mean)
             print("RATIO IS   ", 10.6/rms_fs_mean)
+            setgen.close_sg(instrument)
 
             p=np.zeros(2**N-1)
             h=np.zeros(2**N-1)
@@ -1467,10 +1471,8 @@ while True:
             #plt.hist(n,14,weights=h) 
             #plt.show()
 
-            maxdnl=np.zeros(10)
-            mindnl=np.zeros(10)
             dnl_mean=np.zeros(2**N-2)
-            for k in range(10):
+            for k in range(25):
                 val_list = []
                 try:
                    get_samples(adc_chan, samples_2_get, val_list)
@@ -1478,36 +1480,50 @@ while True:
                    get_samples(adc_chan, samples_2_get, val_list)
                 counts, bins = np.histogram(val_list, bins = [-0.5,0.5,1.5,2.5,3.5,4.5,5.5,6.5,7.5,8.5,9.5,10.5,11.5,12.5,13.5,14.5,15.5])
                 print(counts)
-                print(bins)
                 #Throw away the end point bins which are clipped
                 counts=np.delete(counts,15)
                 counts=np.delete(counts,0)
                 print(counts)
                 time.sleep(1)
-                #plt.hist(val_list,bins)
-                #plt.show()
+                plt.hist(val_list,bins)
+                plt.show()
                 dnl=np.zeros(2**N-2)
                 for i in range(0,(2**N)-2):
                     dnl[i]=(counts[i]/h[i]) - 1
                     dnl_mean[i]=dnl[i]+dnl_mean[i]
-                    print(dnl[i])
-            dnl_mean=dnl_mean/10
+            dnl_mean=dnl_mean/25
             print(dnl_mean)
             maxdnl=round(np.max(dnl_mean),2)
             mindnl=round(np.min(dnl_mean),2)
-            plt.plot(n,dnl)
+            plt.plot(n,dnl_mean)
             plt.xlim([0,16])
             plt.ylim([-1,+1])
             plt.axhline(y=maxdnl, color='r', linestyle='-')
             plt.axhline(y=mindnl, color='r', linestyle='-')
             plt.title("DNL: %0.2f LSB    %0.2f LSB" %(maxdnl,mindnl))
             plt.grid()
+            plt.savefig(filenameD)
             plt.show()
-            inl=np.zeros(2**N-1)
-            for i in range(1,(2**N)-1):
-                for j in range(1,i):
-                    inl[j]=np.sum(dnl[:i])
-                print(inl[j])
+            inl=np.zeros(2**N)
+            for i in range(0,(2**N)-1):
+                print(dnl_mean[:i])
+                if (i == 0 or i == 1):
+                    inl[i]=0
+                else:
+                    inl[i]=np.sum(dnl_mean[:i-1])
+            print(inl)
+            maxinl=round(np.max(inl),2)
+            mininl=round(np.min(inl),2)
+            num=np.linspace(0,(2**N)-1,16,endpoint=True)
+            plt.plot(num,inl)
+            plt.xlim([0,16])
+            plt.ylim([-1,+1])
+            plt.axhline(y=maxinl, color='r', linestyle='-')
+            plt.axhline(y=mininl, color='r', linestyle='-')
+            plt.title("INL: %0.2f LSB    %0.2f LSB" %(maxinl,mininl))
+            plt.grid()
+            plt.savefig(filenameI)
+            plt.show()
 
     if (inp == "OS"):
         if RF_gen_present:
