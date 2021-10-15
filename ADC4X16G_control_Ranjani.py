@@ -24,6 +24,8 @@ import constants as c
 import pyvisa
 from time import gmtime, strftime
 import anritsu_sg_funcs as setgen
+from scipy.stats import norm
+from scipy.stats import norm
 
 #Set this to match whatever your OS has assigned the com port to
 serial_port = '/dev/ttyUSB1'
@@ -561,6 +563,7 @@ while True:
     "FREQ_RESP" to get frequency response in 200 MHz increments with 200 MHz at FS
     "MULT_T" to get multiple ADC snapshots
     "D_I" to  compute DNL and INL at 1147 MHz (non harmonic of sampling frequency)
+    "HIST" to plot histogram
     or "q" to quit\n''')
     if inp == 'q':
         if (use_udp == 0):ser.close()
@@ -1523,6 +1526,29 @@ while True:
             plt.title("INL: %0.2f LSB    %0.2f LSB" %(maxinl,mininl))
             plt.grid()
             plt.savefig(filenameI)
+            plt.show()
+
+    if (inp == "HIST"):
+            inp1=input('Which ADC channel:    ')
+            if inp1 == "": inp1 = "0"
+            adc_chan = int(inp1)
+            inp1 = input("How many multiples of 256 samples (up to 32), default 32?")
+            if inp1=="": inp1 = "32"
+            samples_2_get = 256 * int(inp1)
+            if samples_2_get > 8192: samples_2_get = 8192
+            val_list = []
+            try:
+               get_samples(adc_chan, samples_2_get, val_list)
+            except socket.timeout:
+               get_samples(adc_chan, samples_2_get, val_list)
+            mu, sigma = norm.fit(val_list)
+            print(mu, sigma)
+            bins_list = [-0.5,0.5,1.5,2.5,3.5,4.5,5.5,6.5,7.5,8.5,9.5,10.5,11.5,12.5,13.5,14.5,15.5]
+            plt.hist(val_list, bins=bins_list, density=True, facecolor='green')
+            y = norm.pdf( bins_list, mu, sigma)
+            l = plt.plot(bins_list, y, 'r--', linewidth=2)
+            time.sleep(1)
+            plt.grid()
             plt.show()
 
     if (inp == "OS"):
