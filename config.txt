@@ -70,7 +70,7 @@
 *DAC8 = 450
 
 *Updated Values for SN14
-DAC1 = 573
+DAC1 = 563
 DAC3 = 585
 DAC5 = 541
 DAC7 = 586

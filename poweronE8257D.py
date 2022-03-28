@@ -8,28 +8,15 @@ if __name__ == '__main__':
     p = OptionParser()
     p.set_usage('%prog [options]')
     p.set_description(__doc__)
-    p.add_option('-f', '--freq', dest='freq', type='float',
+    p.add_option('-f', '--freq', dest='freq', type='float', default=0,
         help='''Select the frequency in MHz''')
-    p.add_option('-p', '--power', dest='power', type='float',
+    p.add_option('-p', '--power', dest='power', type='float', default=0,
         help='''Select the power ''')
     p.add_option('-v', '--verbose', dest = 'verbose', action = 'store_true',
         help = '''Be verbose about errors.''')
 
     opts, args = p.parse_args(sys.argv[1:])
 
-if not opts.freq:
-    p.error('Frequency not specified')
-    sys.exit()
-if not opts.power:
-    p.error('Power not specified')
-    sys.exit()
-
-frequency=opts.freq
-power=opts.power
-
-#if (frequency < 4 or frequency > 9.5):
-#  print "Frequency not in range"
-#  sys.exit()
 
 #create an INET, STREAMing socket
 try:
@@ -48,49 +35,6 @@ remote_ip = '131.142.238.63'
 s.connect((remote_ip , port))
 
 print('Socket Connected to ' + ' ip ' + remote_ip)
-
-message = "*IDN?\n"
-
-try :
-    #Set the whole string
-    s.sendall(message.encode())
-except socket.error:
-    #Send failed
-    print('Send failed')
-    sys.exit()
-
-print('ID Query')
-
-#Now receive data
-reply = s.recv(4096)
-
-print("ID is:  " + reply.decode().rstrip('\n') )
-
-#Send some data to remote server
-message = 'freq ' + str(frequency) + ' MHz\n'
-print(message)
-
-try :
-    #Set the whole string
-    s.sendall(message.encode())
-except socket.error:
-    #Send failed
-    print('Send failed')
-    sys.exit()
-
-print('Message send successfully')
-
-message = 'pow:ampl ' + str(power) + ' dBm\n'
-
-try :
-    #Set the whole string
-    s.sendall(message.encode())
-except socket.error:
-    #Send failed
-    print('Send failed')
-    sys.exit()
-
-print('Message send successfully')
 
 message = "freq:cw?\n"
 

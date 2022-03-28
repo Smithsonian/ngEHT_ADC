@@ -17,23 +17,6 @@ if __name__ == '__main__':
 
     opts, args = p.parse_args(sys.argv[1:])
 
-if not opts.freq:
-    p.error('Frequency not specified')
-    sys.exit()
-if not opts.power:
-    p.error('Power not specified')
-    sys.exit()
-
-frequency=opts.freq
-power=opts.power
-
-if ((frequency < 50) or (frequency > 16000)):
-    print('CW Frequency out of range')
-    sys.exit()
-if (power > 12.0):
-    print('Power too high')
-    sys.exit()
-
 
 rm = pyvisa.ResourceManager('@py')
 ipaddr = 'TCPIP0::131.142.238.62::INSTR'
@@ -41,27 +24,8 @@ inst = rm.open_resource(ipaddr)
 inst.write('*CLS')
 inst.query('*IDN?')
 
-#Set frequency
-message='freq ' + str(frequency) + ' MHz'
-inst.write(message)
-
-#Set power
-message='pow ' + str(power) + ' dBm'
-inst.write(message)
-
-reply=inst.query('pow?')
-pow_query=reply.rstrip('\r\n')
-print("Power is:  " + pow_query + ' dBm')
-
-reply=inst.query('freq?')
-freq_query=float(reply.rstrip('\r\n'))
-
-formatted_frequency = "{:.10f}".format(freq_query)
-
-print("Frequency is:  " + formatted_frequency + ' Hz')
-
-#Turn output on
-message='outp on'
+#Turn output off
+message='outp off'
 inst.write(message)
 
 reply=inst.query('outp?')

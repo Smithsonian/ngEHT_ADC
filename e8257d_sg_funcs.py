@@ -129,6 +129,22 @@ def set_power(newpower,s):
     pow_query=reply.decode().rstrip('\r\n')
     print("Power is:  " + pow_query + ' dBm')
 
+def turnoff_power(s):
+    #Turn off power
+    message='outp off\n'
+    s.sendall(message.encode())
+    
+    message='outp?\n'
+    s.sendall(message.encode())
+    
+    reply=s.recv(4096)
+    stat_query=reply.decode().rstrip('\r\n')
+    if (stat_query == 1):
+        print('RF output is on')
+    else:
+        print('RF output is off')
+
+
 def close_sg(s):
     s.close()
 
