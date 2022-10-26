@@ -1588,17 +1588,26 @@ while True:
         print("Adjusted Offset DAC value", new_OS_DAC_value)
                 
     if (inp == "NPR"):
-        inp1 = input("channel (0)")
-        if inp1 == "": adc_chan = 0
-        else: adc_chan = int(inp1)
-        inp1 = input("Notch center freq, MHz (7025)")
-        if inp1 == "": notch_freq = 7025
-        else: notch_freq = int(inp1)
-        inp1 = input("sample freq (16384) ")
-        if inp1 == "": fsample = 16384
-        else: fsample = int(inp1)
+        section = input("Enter Low or High    :")
+    if (section == "Low"):
+         inp_power=24.0
+    elif (section == "High"):
+         inp_power=12.0
+    inp1 = input("channel (0)")
+    if inp1 == "": adc_chan = 0
+    else: adc_chan = int(inp1)
+    inp1 = input("Notch center freq, MHz (6025)")
+    if inp1 == "": notch_freq = 6025
+    else: notch_freq = int(inp1)
+    inp1 = input("sample freq (16384) ")
+    if inp1 == "": fsample = 16384
+    else: fsample = int(inp1)
+    NPR_file='newdata/NPR_' + str(adc_chan) + '_' + str(notch_freq) + '_' + str(section) + '.txt'
+    for n in range(0,12):
         samples_2_get = 8192
         psd_length = int(samples_2_get/2 + 1)
+        #psd_length = int(c.NUM_SAMPLES/2 + 1)
+        print(psd_length)
         #CLKSEL = 0, PRBS ON, DAC ON, DATA ON all channels
         for i in range(4): ADC_params[i] = [0,1,1,1]
         setADC()
@@ -1606,24 +1615,31 @@ while True:
         ser_slow('1Z')                
         #pattern_match OFF
         ser_slow('0Y')      
-        num_2_average = 40
+        num_2_average = 100
         power_sum = psd_length * [0.0]
+        ampl = num_2_average * [0.0]
         for rep in range(num_2_average):
             print("run number ", rep)
             val_list = []
-            get_samples(adc_chan, samples_2_get, val_list)
+            try: 
+                get_samples(adc_chan, samples_2_get, val_list)
+            except socket.timeout:
+                get_samples(adc_chan, samples_2_get, val_list)
             power, freqs = adc.psd(val_list, samples_2_get, Fs=fsample*1e6, detrend=adc.detrend_mean, scale_by_freq=True)
+            #power, freqs = adc.psd(val_list, c.NUM_SAMPLES, Fs=fsample*1e6, detrend=adc.detrend_mean, scale_by_freq=True)
             #report the rms in one run
-            if (rep == num_2_average-1):
-                ampl = rms(val_list)
+            ampl[rep] = rms(val_list)
             #print(power)
             for f in range(psd_length):
                 power_sum[f] += power[f]
+        ampl_final=np.mean(ampl)
         #print(power_sum)
         #We want to average the power inside the notch and compare it to the power 
         # in the adjacent bins
         #For the power in the notch, we'll add up the center bin and 8 bins on each side
         notch_freq_center_bin = int(notch_freq*samples_2_get/fsample)
+        #notch_freq_center_bin = int(notch_freq*c.NUM_SAMPLES/fsample)
+        print(notch_freq_center_bin)
         p_notch = 0.0
         for bin in range(notch_freq_center_bin-8, notch_freq_center_bin+9):
             p_notch += power_sum[bin]
@@ -1634,12 +1650,29 @@ while True:
         for bin in range(notch_freq_center_bin+25, notch_freq_center_bin+50):
             p_adjacent += power_sum[bin]
         p_adjacent = p_adjacent/50.0
+        #for bin in range(notch_freq_center_bin-500, notch_freq_center_bin+500):
+        #    p_notch += power_sum[bin]
+        #p_notch = p_notch/1000.0
+        #p_adjacent = 0.0
+        #for bin in range(notch_freq_center_bin-4500, notch_freq_center_bin-4000):
+        #    p_adjacent += power_sum[bin]
+        #for bin in range(notch_freq_center_bin+4000, notch_freq_center_bin+4500):
+        #    p_adjacent += power_sum[bin]
+        #p_adjacent = p_adjacent/1000.0
         print("Notch power = ", p_notch, "Adjacent Power = ", p_adjacent)
-        print("NPR = ", 10* np.log10(p_adjacent/p_notch), "  Rms = ", ampl, " LSBs")
+        print("NPR = ", 10* np.log10(p_adjacent/p_notch), "  Rms = ", ampl_final ," LSBs")
+        NPR = 10* np.log10(p_adjacent/p_notch)
+        RMS = ampl_final
         fhand = open(avg_psd_file, 'w')
         for f in range(psd_length):
-            fhand.write(str(freqs[f]/1e6) + "," + str(10*np.log10(power_sum[f])) + "\n")
+            fhand.write(str(freqs[f]/1e6) + "   " + str(10*np.log10(power_sum[f])) + "\n")
         fhand.close()
+        fhand = open(NPR_file, 'a')
+        fhand.write('%8.4f %8.4f %8.4f \n' %(inp_power, NPR, ampl_final))
+        fhand.close()
+        inp_power=inp_power-1
+        if ((inp_power == 0) or (inp_power == 12)): sys.exit()
+        input("Please change input power and enter to continue")
         
     if (inp == "DACADJ"):
         #Start with the default DAC values stored in config.txt

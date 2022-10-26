@@ -1,4 +1,6 @@
 import matplotlib.pyplot as plt
+import matplotlib 
+matplotlib.rcParams.update({'font.size': 12})
 import numpy
 from pathlib import Path
 
@@ -17,26 +19,27 @@ nameoffile3='Ch0123' + '_THD_New.png'
 
 
 fig, ax = plt.subplots()
-#plt.plot(freq, B, 'gx',label = "Channel B")
-#plt.plot(freq, C, 'b+',label = "Channel C")
-#plt.plot(freq, D, 'y*',label = "Channel D")
 ax.set_xlabel('Frequency (MHz)')
-ax.set_ylabel('SINAD (dB)')
-ax.set_ylim([-18, -22])
+ax.set_ylabel('SINAD (dB)',color='r')
+ax.set_ylim([17.5, 22])
 ax.grid()
 ax2=ax.twinx()
-ax.plot(freq0, sinad0, color='r', marker='o', linestyle = 'None', label='Channel A')
-ax.plot(freq0, sinad1, color='g', marker='+', linestyle = 'None', label='Channel B')
-ax.plot(freq0, sinad2, color='b', marker='*', linestyle = 'None', label='Channel C')
-ax.plot(freq0, sinad3, color='y', marker='x', linestyle = 'None', label='Channel D')
-ax.legend()
-ax2.plot(freq0, enob0, color='r', marker='o', linestyle = 'None', label='Channel A')
+ax.plot(freq0, -sinad0, color='r', marker='o', linestyle = 'None', label='Channel A')
+ax.plot(freq0, -sinad1, color='r', marker='+', linestyle = 'None', label='Channel B')
+ax.plot(freq0, -sinad2, color='r', marker='*', linestyle = 'None', label='Channel C')
+ax.plot(freq0, -sinad3, color='r', marker='x', linestyle = 'None', label='Channel D')
+ax.legend(loc='lower left')
+ax2.legend(loc='lower right')
+ax.tick_params(axis='y', colors='r')
+ax2.plot(freq0, enob0, color='g', marker='o', linestyle = 'None', label='Channel A')
 ax2.plot(freq0, enob1, color='g', marker='+', linestyle = 'None', label='Channel B')
-ax2.plot(freq0, enob2, color='b', marker='*', linestyle = 'None', label='Channel C')
-ax2.plot(freq0, enob3, color='y', marker='x', linestyle = 'None', label='Channel D')
-ax2.set_ylabel('ENOB (Bits)')
+ax2.plot(freq0, enob2, color='g', marker='*', linestyle = 'None', label='Channel C')
+ax2.plot(freq0, enob3, color='g', marker='x', linestyle = 'None', label='Channel D')
+ax2.set_ylabel('ENOB (Bits)',color='g')
 ax2.grid()
-ax2.set_ylim([2, 6])
+ax2.set_ylim([1.5, 6])
+ax2.legend(loc='lower right')
+ax2.tick_params(axis='y', colors='g')
 
 plt.title('Frequency response for SN14 ADC board\n Carrier at Full Scale Power')
 
